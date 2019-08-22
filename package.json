@@ -1,0 +1,13 @@
+{
+  "name": "intermedia-asana",
+  "version": "1.0.0",
+  "description": "",
+  "main": "asana-manager.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "asana": "^0.17.1",
+    "dotenv": "^8.1.0"
+  }
+}
