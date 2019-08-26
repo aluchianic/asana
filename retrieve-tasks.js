@@ -9,9 +9,12 @@ const AsanaManager = require('./asana-manager');
     const include = "id, assignee, assignee_status, created_at, completed, completed_at, due_on, due_at, external, followers, hearted, hearts, modified_at, name, notes, num_hearts, projects, parent, workspace, memberships";
     const expand = "id, assignee, assignee_status, created_at, completed, completed_at, due_on, due_at, external, followers, hearted, hearts, modified_at, name, notes, num_hearts, projects, parent, workspace, memberships";
 
-    await Asana.getAllCompanyTasks(include, expand);
+    const tasks = await Asana.getAllCompanyTasks("name, created_at, workspace");
+    const result = await Asana.updateTasks(tasks);
+
+    process.exit(0);
   } catch (err) {
     console.error(err.message || err);
-    process.exit(0);
+    process.exit(1);
   }
 })();
