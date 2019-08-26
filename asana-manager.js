@@ -1,7 +1,8 @@
 'use strict';
 
 const Asana = require('asana');
-const dotenv = require('dotenv').config();
+const { createHash } = require('crypto');
+require('dotenv').config();
 
 class AsanaManager {
   /**
@@ -33,7 +34,7 @@ class AsanaManager {
    */
   static setDefaultHeaders(headers) {
     return headers
-      ? { "defaultHeaders": headers}
+      ? { "defaultHeaders": headers }
       : { "defaultHeaders": { "asana-enable": "string_ids,new_sections" } };
   }
 
@@ -45,10 +46,13 @@ class AsanaManager {
 
     return token;
   }
+
   /**
+   * @param {String} [includeFields]
+   * @param {String} [expandFields]
    * @return {Promise}
    */
-  async getAllWorkspaces() {
+  async getAllWorkspaces(includeFields, expandFields) {
     const { data: workspaces } = await this.client.workspaces.findAll();
     return workspaces;
   }
@@ -72,35 +76,88 @@ class AsanaManager {
   }
 
   /**
-   *
-   * @param {String} includeFields
-   * @param {String} expandFields
+   * @param {String} [includeFields]
+   * @param {String} [expandFields]
    * @return {Promise}
    */
-  async getAllCompanyTasks(includeFields, expandFields) {
+  async getAllCompanyTasks(includeFields = '', expandFields = '') {
     let result = {};
+    const limit = 10;
     const workspaces = await this.getAllWorkspaces();
 
     for (const workspace of workspaces) {
-      const [users, projects] = await Promise.all(
-        [this.getUsersByWorkspace(workspace.gid), this.getProjectsByWorkspace(workspace.gid)]);
+      const projects = await this.getProjectsByWorkspace(workspace.gid);
 
-      for (const user of users) {
-        const { data: tasks } = await this.client.tasks.findAll(
-          {
-            assignee: user.gid,
-            workspace: workspace.gid,
-            opt_fields: includeFields,
-            exp_fields: expandFields
-          });
+      for (const project of projects) {
+        const projectCollection = await this.client.tasks.findByProject(project.gid,
+          { limit: limit, opt_fields: includeFields, opt_expand: expandFields });
 
-        if (tasks.length) {
-          result[user.name] = tasks;
+        result[`tasks_${project.gid}`] = await this.collectionsIteration(projectCollection, limit, workspace.gid);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Add uniq ID to each task name. Task object sorted by Project
+   * @param {Object} tasks
+   * @return {Promise}
+   */
+  async updateTasks(tasks) {
+    const keys = Object.keys(tasks);
+    let promises = [];
+
+    for (const key of keys) {
+      for (const it of tasks[key]) {
+        try {
+          promises.push(this.client.tasks.update(it.gid,
+            { name: `[${AsanaManager.createUniqId(it.created_at + it.workspace.gid)}]${it.name}` }));
+
+          if (promises.length > 10) {
+            await Promise.all(promises);
+            promises = [];
+          }
+        } catch (err) {
+          console.log(err);
         }
       }
     }
 
-    console.log(result);
+    return Promise.all(promises);
+  }
+
+  /**
+   * Iterrates over Asana Collection
+   * @param {Object} collection
+   * @param {Number} limit
+   * @param {String} workspaceId
+   * @return {Promise}
+   */
+  async collectionsIteration(collection, limit, workspaceId) {
+    try {
+      const { data } = collection;
+      let all = [...data];
+
+      if (data.length === limit) {
+        const result = await collection.nextPage();
+        all = all.concat(await this.collectionsIteration(result, limit, workspaceId));
+      }
+
+      return all;
+    } catch (err) {
+      throw new Error(err);
+    }
+  };
+
+
+  /**
+   * Returns md5 hashed string
+   * @param {String} text
+   * @return {String}
+   */
+  static createUniqId(text) {
+    return createHash('md5').update(text).digest('hex');
   }
 }
 
