@@ -78,11 +78,15 @@ class AsanaManager {
   /**
    * @param {String} [includeFields]
    * @param {String} [expandFields]
+   * @param {Number} limit 1 - 100
    * @return {Promise}
    */
-  async getAllCompanyTasks(includeFields = '', expandFields = '') {
+  async getAllCompanyTasks({ includeFields = '', expandFields = '', limit }) {
+    if (limit === 0 || limit > 100) {
+      throw new Error('Property limit must be in range of 1 - 100.');
+    }
+
     let result = {};
-    const limit = 10;
     const workspaces = await this.getAllWorkspaces();
 
     for (const workspace of workspaces) {
