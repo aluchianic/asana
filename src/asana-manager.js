@@ -2,7 +2,7 @@
 
 const Asana = require('asana');
 const { createHash } = require('crypto');
-require('dotenv').config();
+require('dotenv').config({ path: '../.env'});
 
 class AsanaManager {
   /**
