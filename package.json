@@ -2,11 +2,12 @@
   "name": "intermedia-asana",
   "version": "1.0.0",
   "description": "",
-  "main": "asana-manager.js",
+  "main": "src/asana-manager.js",
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/node": "^12.7.2",
     "asana": "^0.17.1",
     "dotenv": "^8.1.0"
   }
